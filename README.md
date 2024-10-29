@@ -29,13 +29,13 @@ $ portgen val-people-westend-01    # validator node for people chain on westend
 34xxx - paseo chain
 
 # parachain id (digits 3-4)
-00xx - relay chain
-01xx - asset hub
-02xx - bridge hub
-03xx - collectives
-04xx - people
-05xx - coretime
-06xx - encointer
+xx00x - relay chain
+xx01x - asset hub
+xx02x - bridge hub
+xx03x - collectives
+xx04x - people
+xx05x - coretime
+xx06x - encointer
 
 # reserved ranges
 00-19 - system parachains

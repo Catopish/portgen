@@ -14,7 +14,7 @@ $ portgen boot-polkadot-00         # bootnode for polkadot relay chain
 $ portgen rpc-asset-hub-kusama-01  # RPC node for asset hub on kusama network
 32011 
 
-$ portgen val-people-westend-04    # validator node for people chain on westend
+$ portgen val-people-westend-01    # validator node for people chain on westend
 33044
 ```
 
@@ -42,9 +42,9 @@ $ portgen val-people-westend-04    # validator node for people chain on westend
 20+ - network parachains
 
 # role and instance (last digit)
-xxx0 - bootnode (instance 00)
+xxx0 - bootnode (instance 01)
 xxx1-3 - rpc nodes (instances 01-03)
-xxx4-9 - validator nodes (instances 04-09)
+xxx4-9 - validator nodes (instances 01-06)
 
 Full port format: 3NCCI
 N = network (1-4)
@@ -52,7 +52,7 @@ CC = chain id (00-99)
 I = instance (0-9)
 
 Example breakdown:
-32011 = Kusama (2) Asset Hub (01) RPC instance 1
-33044 = Westend (3) People Chain (04) Validator instance 4
-34000 = Paseo (4) Relay Chain (01) Bootnode
+32011 = Kusama (2) Asset Hub (01) RPC instance 01
+33044 = Westend (3) People Chain (04) Validator instance 01
+34000 = Paseo (4) Relay Chain (01) Bootnode 01
 ```

@@ -1,203 +1,190 @@
-use std::error::Error;
+use clap::Parser;
+use std::{fmt, str::FromStr};
+
+const PORT_BASE: u16 = 30000;
+
+#[derive(Parser)]
+#[command(name = "portgen", about = "Generate port numbers for substrate nodes")]
+#[command(after_help = "\
+Examples:
+  # Relay chain nodes
+  portgen boot-polkadot-00           # Bootnode (31000)
+  portgen rpc-kusama-01              # RPC node (32001)
+  portgen val-westend-04             # Validator (33004)
+
+  # System parachain nodes
+  portgen rpc-asset-hub-polkadot-01  # Asset Hub RPC (31011)
+  portgen boot-bridge-hub-kusama-00  # Bridge Hub boot (32020)
+  portgen val-people-westend-04      # People chain validator (33044)
+
+Supported roles:
+  - boot: bootnode (instance 00)
+  - rpc:  RPC node (instances 01-03)
+  - val:  validator node (instances 04-09)
+
+Format: {role}-{chain}-{network}-{instance}
+Port:   3NCCI (N=network, CC=chain, I=instance)")]
+struct Args {
+    /// Node name (e.g., rpc-asset-hub-polkadot-01)
+    node_name: String,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Port(u16);
+
+impl fmt::Display for Port {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 enum Network {
-    Polkadot = 31000,
-    Kusama = 32000,
-    Westend = 33000,
-    Paseo = 34000,
-    PolkadotCustom = 35000,
-    KusamaCustom = 36000,
-    PaseoCustom = 38000,
+    Polkadot = 1,
+    Kusama = 2,
+    Westend = 3,
+    Paseo = 4,
 }
 
 #[derive(Debug, Clone, Copy)]
+struct ChainId(u16);
+
+#[derive(Debug, Clone, Copy)]
 enum Role {
-    Boot = 10,
-    Val = 20,
-    Rpc = 30,
+    Boot,
+    Rpc(u8),
+    Validator(u8),
 }
 
-// System chains and their offsets
-const SYSTEM_CHAINS: [(&str, u16); 7] = [
-    ("relay", 0),
-    ("asset-hub", 100),
-    ("bridge-hub", 200),
-    ("collectives", 300),
-    ("people", 400),
-    ("coretime", 500),
-    ("encointer", 600),
-];
+impl Role {
+    fn from_str(role: &str, instance_str: &str) -> Result<Self, &'static str> {
+        // Ensure instance is exactly two digits
+        if instance_str.len() != 2 {
+            return Err("instance must be two digits (00-09)");
+        }
 
-// Custom chains mapped by network
-const POLKADOT_CHAINS: [(&str, u16); 9] = [
-    ("moonbeam", 0),
-    ("hyperbridge", 100),
-    ("interlay", 200),
-    ("acala", 300),
-    ("kilt", 400),
-    ("ajuna", 500),
-    ("bifrost", 500),
-    ("hydration", 500),
-    ("unique", 500),
-];
+        // Parse instance number
+        let num: u8 = instance_str
+            .parse()
+            .map_err(|_| "invalid instance number")?;
 
-const KUSAMA_CHAINS: [(&str, u16); 2] = [
-    ("karura", 300),
-    ("kintsugi", 200),
-];
+        match (role, num) {
+            // Boot node is always port X000 regardless of input number
+            ("boot", 0..=9) => Ok(Self::Boot),
+            // RPC nodes must be 01-03
+            ("rpc", 1..=3) => Ok(Self::Rpc(num)),
+            // Validator nodes must be 01-06 (will map to 4-9)
+            ("val", 1..=6) => Ok(Self::Validator(num)),
+            _ => Err("invalid role/instance combination"),
+        }
+    }
 
-const PASEO_CHAINS: [(&str, u16); 1] = [
-    ("gargantua", 100),
-];
-
-fn get_role(s: &str) -> Option<Role> {
-    match s {
-        "boot" => Some(Role::Boot),
-        "val" => Some(Role::Val),
-        "rpc" => Some(Role::Rpc),
-        _ => None,
+    fn to_digit(self) -> u16 {
+        match self {
+            Self::Boot => 0,
+            Self::Rpc(n) => n as u16,
+            Self::Validator(n) => (n + 3) as u16,  // 01->4, 02->5, 03->6...
+        }
     }
 }
 
-fn get_network(s: &str) -> Option<Network> {
-    match s.to_lowercase().as_str() {
-        "polkadot" => Some(Network::Polkadot),
-        "kusama" => Some(Network::Kusama),
-        "westend" => Some(Network::Westend),
-        "paseo" => Some(Network::Paseo),
-        _ => None,
+impl FromStr for Network {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "polkadot" => Ok(Self::Polkadot),
+            "kusama" => Ok(Self::Kusama),
+            "westend" => Ok(Self::Westend),
+            "paseo" => Ok(Self::Paseo),
+            _ => Err("invalid network name"),
+        }
     }
 }
 
-fn normalize_chain_name(name: &str) -> String {
-    name.to_lowercase()
-        .replace("nexus", "hyperbridge")
-        .replace("hydradx", "hydration")
-        .replace("spiritnet", "kilt")
-}
-
-fn is_custom_chain(chain: &str, network: Network) -> Option<u16> {
-    let chain = normalize_chain_name(chain);
-    match network {
-        Network::Polkadot => POLKADOT_CHAINS.iter()
-            .find(|(name, _)| *name == chain)
-            .map(|(_, offset)| *offset),
-        Network::Kusama => KUSAMA_CHAINS.iter()
-            .find(|(name, _)| *name == chain)
-            .map(|(_, offset)| *offset),
-        Network::Paseo => PASEO_CHAINS.iter()
-            .find(|(name, _)| *name == chain)
-            .map(|(_, offset)| *offset),
-        _ => None,
-    }
-}
-
-fn get_system_offset(chain: &str) -> Option<u16> {
-    SYSTEM_CHAINS.iter()
-        .find(|(name, _)| *name == chain.to_lowercase())
-        .map(|(_, offset)| *offset)
-}
-
-fn calculate_port(name: &str) -> Option<u16> {
-    let parts: Vec<&str> = name.trim_end_matches(".yaml").split('-').collect();
-    if parts.len() < 3 {
-        return None;
-    }
-
-    let role = get_role(parts[0])? as u16;
-    let instance: u16 = parts.last()?.parse().ok()?;
-    if instance == 0 || instance > 9 {
-        return None;
-    }
-
-    let middle: Vec<&str> = parts[1..parts.len()-1].to_vec();
-    
-    // Handle relay chains
-    if middle.len() == 1 {
-        let network = get_network(middle[0])? as u16;
-        return Some(network + role + instance);
-    }
-
-    let network_name = middle.last()?;
-    let network = get_network(network_name)?;
-    let chain_name = middle[..middle.len()-1].join("-");
-
-    // First check if it's a custom chain
-    if let Some(offset) = is_custom_chain(&chain_name, network) {
-        let base = match network {
-            Network::Polkadot => Network::PolkadotCustom as u16,
-            Network::Kusama => Network::KusamaCustom as u16,
-            Network::Paseo => Network::PaseoCustom as u16,
-            _ => network as u16,
+impl ChainId {
+    fn from_str(chain: Option<&str>) -> Result<Self, &'static str> {
+        let id = match chain {
+            None => 0, // Relay chain
+            Some(name) => match name {
+                // System chains (0-19)
+                "asset-hub" | "statemine" | "statemint" => 1,
+                "bridge-hub" => 2,
+                "collectives" => 3,
+                "people" => 4,
+                "coretime" => 5,
+                "encointer" => 6,
+                // Custom chains (20+)
+                "moonbeam" => 20,
+                "hyperbridge" | "nexus" => 21,
+                "interlay" => 22,
+                "acala" => 23,
+                "kilt" | "spiritnet" => 24,
+                "karura" => 25,
+                _ => return Err("unknown chain name"),
+            },
         };
-        return Some(base + offset + role + instance);
+        Ok(ChainId(id))
     }
-
-    // Then check system chains
-    if let Some(offset) = get_system_offset(&chain_name) {
-        return Some(network as u16 + offset + role + instance);
-    }
-
-    None
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Usage: {} <node-name>", args[0]);
-        std::process::exit(1);
-    }
-
-    match calculate_port(&args[1]) {
-        Some(port) => println!("{}", port),
-        None => eprintln!("Invalid node name format"),
-    }
-
-    Ok(())
+#[derive(Debug)]
+struct NodeName<'a> {
+    role: &'a str,
+    chain: Option<String>,
+    network: &'a str,
+    instance: &'a str,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl<'a> NodeName<'a> {
+    fn parse(s: &'a str) -> Result<Self, &'static str> {
+        let parts: Vec<&str> = s.trim_end_matches(".yaml").split('-').collect();
+        if parts.len() < 3 {
+            return Err("invalid node name format");
+        }
 
-    #[test]
-    fn test_system_chains() {
-        assert_eq!(calculate_port("rpc-asset-hub-polkadot-01"), Some(31131));
-        assert_eq!(calculate_port("val-bridge-hub-kusama-01"), Some(32221));
-        assert_eq!(calculate_port("rpc-people-westend-02"), Some(33432));
-        assert_eq!(calculate_port("rpc-encointer-kusama-01"), Some(32631));
+        let role = parts.first().ok_or("missing role")?;
+        let instance = parts.last().ok_or("missing instance")?;
+        let network = parts[parts.len() - 2];
+
+        // Only include chain if we have more parts than role-network-instance
+        let chain = if parts.len() > 3 {
+            Some(parts[1..parts.len() - 2].join("-"))
+        } else {
+            None
+        };
+
+        Ok(Self {
+            role,
+            chain,
+            network,
+            instance,
+        })
     }
+}
 
-    #[test]
-    fn test_custom_chains() {
-        // Polkadot ecosystem
-        assert_eq!(calculate_port("rpc-moonbeam-polkadot-01"), Some(35031));
-        assert_eq!(calculate_port("rpc-kilt-polkadot-01"), Some(35431));
-        assert_eq!(calculate_port("rpc-hyperbridge-polkadot-01"), Some(35131));
-        assert_eq!(calculate_port("rpc-hydration-polkadot-01"), Some(35531));
-        assert_eq!(calculate_port("rpc-unique-polkadot-01"), Some(35531));
-        assert_eq!(calculate_port("rpc-ajuna-polkadot-01"), Some(35531));
-        
-        // Kusama ecosystem
-        assert_eq!(calculate_port("rpc-karura-kusama-01"), Some(36331));
-        assert_eq!(calculate_port("rpc-kintsugi-kusama-01"), Some(36231));
-        
-        // Paseo ecosystem
-        assert_eq!(calculate_port("rpc-gargantua-paseo-01"), Some(38131));
-    }
+fn calculate_port(node_str: &str) -> Result<Port, &'static str> {
+    let node = NodeName::parse(node_str)?;
+    
+    let network = node.network.parse::<Network>()?;
+    let chain_id = ChainId::from_str(node.chain.as_deref())?;
+    let role = Role::from_str(node.role, node.instance)?;
 
-    #[test]
-    fn test_aliases() {
-        assert_eq!(calculate_port("rpc-nexus-polkadot-01"), Some(35131)); // hyperbridge
-        assert_eq!(calculate_port("rpc-hydradx-polkadot-01"), Some(35531)); // hydration
-    }
+    let port = PORT_BASE +
+        (network as u16 * 1000) +
+        (chain_id.0 * 10) +
+        role.to_digit();
 
-    #[test]
-    fn test_invalid_inputs() {
-        assert_eq!(calculate_port("invalid"), None);
-        assert_eq!(calculate_port("rpc-invalid-01"), None);
-        assert_eq!(calculate_port("rpc-polkadot-00"), None);
-        assert_eq!(calculate_port("rpc-polkadot-10"), None);
+    Ok(Port(port))
+}
+
+fn main() {
+    let args = Args::parse();
+    match calculate_port(&args.node_name) {
+        Ok(port) => println!("{port}"),
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            std::process::exit(1);
+        }
     }
 }

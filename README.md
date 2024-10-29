@@ -1,60 +1,58 @@
 # portgen
-
 Port number generator for substrate node naming conventions.
 
 ## install
-
 ```sh
-curl -L https://github.com/rotkonetworks/portgen/releases/download/v0.3.0/portgen -o portgen && chmod +x portgen && sudo mv portgen /usr/local/bin/
+curl -L https://github.com/rotkonetworks/portgen/releases/download/v0.4.0/portgen -o portgen && chmod +x portgen && sudo mv portgen /usr/local/bin/
 ```
 
 ## usage example
-
 ```sh
-$ portgen rpc-polkadot-01        # p2p port for polkadot relay chain rpc node 1
-31031
+$ portgen boot-polkadot-00         # bootnode for polkadot relay chain
+31000
 
-$ portgen rpc-asset-hub-kusama-01  # p2p port for asset parachain rpc node 1 on kusama network
-32131 
+$ portgen rpc-asset-hub-kusama-01  # RPC node for asset hub on kusama network
+32011 
 
-$ portgen val-kilt-polkadot-01     # p2p port for kilt (custom) parachain validator node 1 on polkadot network
-35421
+$ portgen val-people-westend-04    # validator node for people chain on westend
+33044
 ```
 
 ## port scheme
+```
+{role}-{chain}-{network}-{instance}
 
-```sh
-{role}-{chain?}-{network}-{instance}
+# network (first digit after 3)
+31xxx - polkadot chain
+32xxx - kusama chain
+33xxx - westend chain
+34xxx - paseo chain
 
-# network base (first two digits)
-31xxx - polkadot relay/system paras
-32xxx - kusama relay/system paras
-33xxx - westend relay/system paras  
-34xxx - paseo relay/system paras
-35xxx - polkadot custom paras
-36xxx - kusama custom paras
-38xxx - paseo custom paras
+# parachain id (digits 3-4)
+00xx - relay chain
+01xx - asset hub
+02xx - bridge hub
+03xx - collectives
+04xx - people
+05xx - coretime
+06xx - encointer
 
-# chain offset (3rd and 4th digits) 
-xx0xx - relay chain
-xx1xx - asset hub
-xx2xx - bridge hub
-xx3xx - collectives
-xx4xx - people
-xx5xx - coretime
-xx6xx - encointer
-350xx - moonbeam (polkadot)
-351xx - hyperbridge (polkadot) 
-352xx - interlay (polkadot)
-353xx - acala (polkadot)
-354xx - kilt (polkadot)
-362xx - kintsugi (kusama)
-363xx - karura (kusama) 
-381xx - gargantua (paseo)
+# reserved ranges
+00-19 - system parachains
+20+ - network parachains
 
 # role and instance (last digit)
-xxx1x - bootnode
-xxx2x - validator/collator  
-xxx3x - rpc node
-xxxxN - instance number (1-9)
+xxx0 - bootnode (instance 00)
+xxx1-3 - rpc nodes (instances 01-03)
+xxx4-9 - validator nodes (instances 04-09)
+
+Full port format: 3NCCI
+N = network (1-4)
+CC = chain id (00-99)
+I = instance (0-9)
+
+Example breakdown:
+32011 = Kusama (2) Asset Hub (01) RPC instance 1
+33044 = Westend (3) People Chain (04) Validator instance 4
+34000 = Paseo (4) Relay Chain (01) Bootnode
 ```

@@ -42,9 +42,9 @@ xx06x - encointer
 20+ - network parachains
 
 # role and instance (last digit)
-xxx0 - bootnode (instance 01)
-xxx1-3 - rpc nodes (instances 01-03)
-xxx4-9 - validator nodes (instances 01-06)
+xxxxx0 - bootnode (instance 01)
+xxxxx1-3 - rpc nodes (instances 01-03)
+xxxxx4-9 - validator nodes (instances 01-06)
 
 Full port format: 3NCCI
 N = network (1-4)

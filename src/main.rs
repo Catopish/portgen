@@ -134,18 +134,25 @@ impl ChainId {
         let id = match chain {
             None => 0,
             Some(name) => match name {
+                // system
                 "asset-hub" | "statemine" | "statemint" => 1,
-                "bridge-hub" => 2,
+                "bridge-hub" | "bridgehub" => 2,
                 "collectives" => 3,
                 "people" => 4,
                 "coretime" => 5,
                 "encointer" => 6,
-                "moonbeam" => 20,
+                // custom
+                "moonbeam" | "moonriver" => 20,
                 "hyperbridge" | "nexus" => 21,
-                "interlay" => 22,
-                "acala" => 23,
+                "interlay" | "kintsugi" => 22,
+                "acala" | "karura" => 23,
                 "kilt" | "spiritnet" => 24,
-                "karura" => 25,
+                "hyperbridge" | "gargantua" => 25,
+                "hydration" | "hydradx" => 26,
+                "bifrost-polkadot" | "bifrost-kusama" => 27,
+                "bajun" | "ajuna" => 28,
+                "polimec" => 29,
+                "unique" | "quartz" => 30,
                 _ => return Err("unknown chain name"),
             },
         };

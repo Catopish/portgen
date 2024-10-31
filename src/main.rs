@@ -4,7 +4,7 @@ use std::{fmt, net::Ipv4Addr, str::FromStr};
 const PORT_BASE: u16 = 30000;
 
 #[derive(Parser)]
-#[command(name = "portgen", about = "Generate port numbers and IP addresses for substrate nodes")]
+#[command(name = "portgen", about = "Generate port numbers and IP addresses for substrate nodes", version = "0.6.1")]
 #[command(after_help = "\
 Examples:
   # Relay chain nodes

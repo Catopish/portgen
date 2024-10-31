@@ -3,7 +3,7 @@ Port number generator for substrate node naming conventions.
 
 ## install
 ```sh
-curl -L https://github.com/rotkonetworks/portgen/releases/download/v0.6.1/portgen -o portgen && chmod +x portgen && sudo mv portgen /usr/local/bin/
+curl -L https://github.com/rotkonetworks/portgen/releases/download/v0.6.2/portgen -o portgen && chmod +x portgen && sudo mv portgen /usr/local/bin/
 ```
 
 ## usage example

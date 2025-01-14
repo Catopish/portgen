@@ -4,7 +4,11 @@ use std::{fmt, net::Ipv4Addr, str::FromStr};
 const PORT_BASE: u16 = 30000;
 
 #[derive(Parser)]
-#[command(name = "portgen", about = "Generate port numbers and IP addresses for substrate nodes", version = "0.6.2")]
+#[command(
+    name = "portgen",
+    about = "Generate port numbers and IP addresses for substrate nodes",
+    version = "0.6.2"
+)]
 #[command(after_help = "\
 Examples:
   # Relay chain nodes
@@ -152,6 +156,7 @@ impl ChainId {
                 "bajun" | "ajuna" => 27,
                 "polimec" => 28,
                 "unique" | "quartz" => 29,
+                "invarch" => 30,
                 _ => return Err("unknown chain name"),
             },
         };
@@ -199,22 +204,19 @@ impl<'a> NodeName<'a> {
 
 fn calculate_port(node_str: &str) -> Result<Port, &'static str> {
     let node = NodeName::parse(node_str)?;
-    
+
     let network = node.network.parse::<Network>()?;
     let chain_id = ChainId::from_str(node.chain.as_deref())?;
     let role = Role::from_str(node.role, node.instance)?;
 
-    let port = PORT_BASE +
-        (network as u16 * 1000) +
-        (chain_id.0 * 10) +
-        role.to_digit();
+    let port = PORT_BASE + (network as u16 * 1000) + (chain_id.0 * 10) + role.to_digit();
 
     Ok(Port(port))
 }
 
 fn calculate_address(node_str: &str) -> Result<NodeAddress, &'static str> {
     let node = NodeName::parse(node_str)?;
-    
+
     let network = node.network.parse::<Network>()?;
     let chain_id = ChainId::from_str(node.chain.as_deref())?;
     let role = Role::from_str(node.role, node.instance)?;
@@ -222,13 +224,12 @@ fn calculate_address(node_str: &str) -> Result<NodeAddress, &'static str> {
     let port = calculate_port(node_str)?;
 
     // Calculate third octet: {role}{network}{instance}
-    let third_octet = 
-        role.to_ip_digit() * 100 +    // First digit (0/1/2) * 100
+    let third_octet = role.to_ip_digit() * 100 +    // First digit (0/1/2) * 100
         (network as u8) * 10 +        // Second digit (1-4) * 10
-        role.get_instance_number();    // Third digit (instance number)
+        role.get_instance_number(); // Third digit (instance number)
 
     let fourth_octet = chain_id.to_ip_host();
-    
+
     // 192.168.xyz.abc
     let ip = Ipv4Addr::new(192, 168, third_octet, fourth_octet);
 
